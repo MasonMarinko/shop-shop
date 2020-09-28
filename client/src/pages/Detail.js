@@ -1,29 +1,32 @@
 import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from '@apollo/react-hooks';
-import { useStoreContext } from "../utils/GlobalState";
+
+import { QUERY_PRODUCTS } from "../utils/queries";
+import spinner from '../assets/spinner.gif'
+
+// import { useStoreContext } from "../utils/GlobalState";
+import { useDispatch, useSelector } from 'react-redux';
 import {
   REMOVE_FROM_CART,
   UPDATE_CART_QUANTITY,
   ADD_TO_CART,
   UPDATE_PRODUCTS,
 } from '../utils/actions';
-import { QUERY_PRODUCTS } from "../utils/queries";
-import spinner from '../assets/spinner.gif';
 import Cart from '../components/Cart';
+
 import { idbPromise } from "../utils/helpers";
 
-
 function Detail() {
-  const removeFromCart = () => {
-    dispatch({
-      type: REMOVE_FROM_CART,
-      _id: currentProduct._id
-    });
-  
-    // upon removal from cart, delete the item from IndexedDB using the `currentProduct._id` to locate what to remove
-    idbPromise('cart', 'delete', { ...currentProduct });
-  };
+  const dispatch = useDispatch();
+  const state = useSelector(state => state);
+  const { id } = useParams();
+
+  const [currentProduct, setCurrentProduct] = useState({})
+
+  const { loading, data } = useQuery(QUERY_PRODUCTS);
+
+  const { products, cart } = state;
 
   const addToCart = () => {
     const itemInCart = cart.find((cartItem) => cartItem._id === id)
@@ -48,15 +51,18 @@ function Detail() {
       idbPromise('cart', 'put', { ...currentProduct, purchaseQuantity: 1 });
     }
   }
-  const [state, dispatch] = useStoreContext();
-  const { id } = useParams();
   
-  const [currentProduct, setCurrentProduct] = useState({})
+
+  const removeFromCart = () => {
+    dispatch({
+      type: REMOVE_FROM_CART,
+      _id: currentProduct._id
+    });
   
-  const { loading, data } = useQuery(QUERY_PRODUCTS);
-  
-  const { products, cart } = state;
-  
+    // upon removal from cart, delete the item from IndexedDB using the `currentProduct._id` to locate what to remove
+    idbPromise('cart', 'delete', { ...currentProduct });
+  };
+
   useEffect(() => {
     // already in global store
     if (products.length) {
@@ -102,15 +108,13 @@ function Detail() {
             <strong>Price:</strong>
             ${currentProduct.price}
             {" "}
-            <button onClick = {addToCart}>
-              Add to Cart
-            </button>
+            <button onClick={addToCart}>Add to cart</button>
             <button
-            disabled={!cart.find(p=> p._id === currentProduct._id)}
-            onClick={removeFromCart}
+              disabled={!cart.find(p => p._id === currentProduct._id)}
+              onClick={removeFromCart}
             >
               Remove from Cart
-            </button>
+</button>
           </p>
 
           <img
@@ -122,7 +126,7 @@ function Detail() {
       {
         loading ? <img src={spinner} alt="loading" /> : null
       }
-        <Cart />
+      <Cart />
     </>
   );
 };
